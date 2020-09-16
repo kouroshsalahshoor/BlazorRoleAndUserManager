@@ -1,0 +1,413 @@
+﻿@page "/users"
+@inherits OwningComponentBase<UserManager<AppUser>>
+@attribute [Authorize(Roles = "Admins")]
+
+<h3>Users</h3>
+
+@if (_items == null)
+{
+    <p>Loading ...</p>
+}
+else
+{
+    <div class="table-responsive tableFixHead">
+        <table class="table table-sm table-bordered table-hover table-striped">
+            <caption>List of Users</caption>
+            <thead>
+                <tr>
+                    <th scope="col">
+                        <button class="btn btn-outline-success" @onclick="add" title="Add"><span class="oi oi-plus" aria-hidden="true"></span></button>
+                    </th>
+                    <th scope="col">Id</th>
+                    <th scope="col">User Name</th>
+                    <th scope="col">First Name</th>
+                    <th scope="col">Last Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Phone Number</th>
+                    <th scope="col">Role</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNbr = 1;
+                }
+                @foreach (var item in _items)
+                {
+                    <tr>
+                        <td>@(rowNbr++)</td>
+                        <td>@item.Id</td>
+                        <td>@item.UserName</td>
+                        <td>@item.FirstName</td>
+                        <td>@item.LastName</td>
+                        <td>@item.Email</td>
+                        <td>@item.Phone</td>
+                        <td>@item.SelectedRoleName</td>
+                        <td>
+                            @if (item.UserName != "admin")
+                            {
+                                <button class="btn btn-outline-primary" @onclick="(()=>edit(item))" title="Edit"><span class="oi oi-pencil" aria-hidden="true"></span></button>
+                                <button class="btn btn-outline-danger" @onclick="(async ()=>await delete(item))" title="Delete"><span class="oi oi-trash" aria-hidden="true"></span></button>
+                            }
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (_show)
+{
+    <div class="modal" tabindex="-1" style="display:block;">
+
+        <EditForm Model="_model" OnValidSubmit="@(async () => await validsubmit())">
+
+            <div class="modal-dialog modal-dialog-scrollable modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-info">@(_model.Id == null ? "Add" : "Edit") کاربر</h5>
+                        <button type="button" class="close" @onclick="close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <DataAnnotationsValidator />
+
+                            <div class="text-danger">
+                                <ul>
+                                    @foreach (var error in _serverSideErrors)
+                                    {
+                                        <li>@error</li>
+                                    }
+                                </ul>
+                            </div>
+                            @*<ValidationSummary />*@
+
+                            <div class="col-12">
+
+                                <div class="row">
+                                    <div class="col-4">
+                                        User Name
+                                    </div>
+                                    <div class="col-8">
+                                        <div class="form-group">
+                                            <InputText class="form-control" @bind-Value="@_model.UserName" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4"></div>
+                                    <div class="col-8"><ValidationMessage For="@(()=> _model.UserName)"></ValidationMessage></div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-4">
+                                        First Name
+                                    </div>
+                                    <div class="col-8">
+                                        <div class="form-group">
+                                            <InputText class="form-control" @bind-Value="@_model.FirstName" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4"></div>
+                                    <div class="col-8"><ValidationMessage For="@(()=> _model.FirstName)"></ValidationMessage></div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-4">
+                                        Last Name
+                                    </div>
+                                    <div class="col-8">
+                                        <div class="form-group">
+                                            <InputText class="form-control" @bind-Value="@_model.LastName" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4"></div>
+                                    <div class="col-8"><ValidationMessage For="@(()=> _model.LastName)"></ValidationMessage></div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-4">
+                                        Email
+                                    </div>
+                                    <div class="col-8">
+                                        <div class="form-group">
+                                            <InputText class="form-control" @bind-Value="@_model.Email" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4"></div>
+                                    <div class="col-8"><ValidationMessage For="@(()=> _model.Email)"></ValidationMessage></div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-4">
+                                        Phone Number
+                                    </div>
+                                    <div class="col-8">
+                                        <div class="form-group">
+                                            <InputText class="form-control" @bind-Value="@_model.Phone" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4"></div>
+                                    <div class="col-8"><ValidationMessage For="@(()=> _model.Phone)"></ValidationMessage></div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-4">
+                                        Password
+                                    </div>
+                                    <div class="col-8">
+                                        <div class="form-group">
+                                            <InputText class="form-control" @bind-Value="@_model.Password" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4"></div>
+                                    <div class="col-8"><p class="text-danger">@_passwordError</p></div>
+                                    @*<div class="col-8"><ValidationMessage For="@(()=> _model.Password)"></ValidationMessage></div>*@
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-4">
+                                        Roles
+                                    </div>
+                                    <div class="col-8">
+                                        <div class="form-group">
+                                            <select @bind="_model.SelectedRoleName" class="form-control">
+                                                <option value="">Please select an option ...</option>
+                                                @foreach (var role in _roles)
+                                                {
+                                                    <option value="@role.Name">@role.FaName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4"></div>
+                                    <div class="col-8"><ValidationMessage For="@(()=> _model.SelectedRoleName)"></ValidationMessage></div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success" data-dismiss="modal">
+                            <span aria-hidden="true">ثبت</span>
+                        </button>
+                        <button type="button" class="btn btn-light" @onclick="close">
+                            <span aria-hidden="true">خروج</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </EditForm>
+    </div>
+}
+
+@code {
+    private UserManager<AppUser> _userManager => Service;
+
+    [Inject] private IJSRuntime _js { get; set; }
+    [Inject] private RoleManager<AppRole> _roleManager { get; set; }
+
+    List<PageViewModel> _items;
+    PageViewModel _model;
+    private bool _show;
+    private List<AppRole> _roles;
+
+    private List<string> _serverSideErrors = new List<string>();
+    private string _passwordError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _roles = await _roleManager.Roles.ToListAsync();
+
+        await setItems();
+    }
+
+    private async Task setItems()
+    {
+        _items = new List<PageViewModel>();
+
+        var users = await _userManager.Users.ToListAsync();
+        foreach (var user in users)
+        {
+            var roleNames = await _userManager.GetRolesAsync(user);
+            var roleName = roleNames.FirstOrDefault();
+            var role = _roles.SingleOrDefault(x => x.Name == roleName);
+
+            var vm = new PageViewModel();
+            vm.Email = user.Email;
+            vm.FirstName = user.FirstName;
+            vm.Id = user.Id;
+            vm.LastName = user.LastName;
+            vm.Phone = user.PhoneNumber;
+            vm.SelectedRoleName = (role == null ? "ندارد" : role.FaName);
+            vm.UserName = user.UserName;
+
+            _items.Add(vm);
+        }
+    }
+
+    private async Task validsubmit()
+    {
+        _serverSideErrors.Clear();
+        _passwordError = null;
+
+        //validations
+        if (string.IsNullOrEmpty(_model.Password))
+        {
+            _passwordError = "Please enter a password";
+        }
+        else if (_model.Password.Length < 3)
+        {
+            _passwordError = "Password must be at least 3 chatacters long";
+        }
+        else if (_model.Id == null && await _userManager.FindByNameAsync(_model.UserName) != null)
+        {
+            _serverSideErrors.Add("There is another user with the same username. Please change the username");
+        }
+        else
+        {
+            if (_model.Id == null)//add
+            {
+                //save with pwd
+                var appUser = new AppUser(_model.UserName, _model.FirstName, _model.LastName, _model.Email, _model.Phone);
+                await _userManager.CreateAsync(appUser, _model.Password);
+
+                //role
+                if (!await _userManager.IsInRoleAsync(appUser, _model.SelectedRoleName))
+                {
+                    await _userManager.AddToRoleAsync(appUser, _model.SelectedRoleName);
+                }
+            }
+            else //edit
+            {
+                var appUser = await _userManager.FindByIdAsync(_model.Id);
+                appUser.Email = _model.Email;
+                appUser.FirstName = _model.FirstName;
+                appUser.LastName = _model.LastName;
+                appUser.PhoneNumber = _model.Phone;
+                appUser.UserName = _model.UserName;
+
+                await _userManager.UpdateAsync(appUser);
+
+                //pwd
+                if (!string.IsNullOrEmpty(_model.Password))
+                {
+                    await _userManager.RemovePasswordAsync(appUser);
+                    await _userManager.AddPasswordAsync(appUser, _model.Password);
+                }
+
+                if (!await _userManager.IsInRoleAsync(appUser, _model.SelectedRoleName))
+                {
+                    var roles = await _userManager.GetRolesAsync(appUser);
+                    foreach (var role in roles)
+                    {
+                        await _userManager.RemoveFromRoleAsync(appUser, role);
+                    }
+
+                    await _userManager.AddToRoleAsync(appUser, _model.SelectedRoleName);
+                }
+            }
+
+            //saved
+            await _js.InvokeVoidAsync("alert", "Data saved");
+            _show = false;
+            await setItems();
+        }
+    }
+
+    private void add()
+    {
+        _serverSideErrors.Clear();
+        _passwordError = null;
+
+        _model = new PageViewModel();
+        _model.Id = null;
+
+        _show = true;
+    }
+
+    private void edit(PageViewModel vm)
+    {
+        _serverSideErrors.Clear();
+        _passwordError = null;
+
+        _model = vm;
+
+        _show = true;
+    }
+
+    private async Task delete(PageViewModel vm)
+    {
+        _serverSideErrors.Clear();
+        _passwordError = null;
+
+        if (await _js.InvokeAsync<bool>("confirm", "Are absolutely you sure you want to delete this item?"))
+        {
+            _model = null;
+
+            var modelToDelete = await _userManager.FindByIdAsync(vm.Id);
+            var result = await _userManager.DeleteAsync(modelToDelete);
+            if (result.Succeeded)
+            {
+                //saved
+                await _js.InvokeVoidAsync("alert", "Data saved");
+
+                await setItems();
+            }
+            else
+            {
+                //foreach (IdentityError err in result.Errors)
+                //{
+                //    _serverSideErrors.Add(err.Description);
+                //}
+
+                //error
+                await _js.InvokeVoidAsync("alert", "Error deleting data");
+            }
+        }
+
+    }
+
+    private void close()
+    {
+        _show = false;
+    }
+
+    private class PageViewModel
+    {
+        public string Id { get; set; }
+        [Display(Name = "نام کاربری")]
+        [Required(ErrorMessage = "لطفا {0} را وارد نمائید")]
+        public string UserName { get; set; }
+        [Display(Name = "نام")]
+        [Required(ErrorMessage = "لطفا {0} را وارد نمائید")]
+        public string FirstName { get; set; }
+        [Display(Name = "نام خانوادگی")]
+        [Required(ErrorMessage = "لطفا {0} را وارد نمائید")]
+        public string LastName { get; set; }
+        [Display(Name = "ایمیل")]
+        [EmailAddress(ErrorMessage = "لطفا {0} صحیح وارد نمائید")]
+        [Required(ErrorMessage = "لطفا {0} را وارد نمائید")]
+        public string Email { get; set; }
+        [Display(Name = "تلفن")]
+        [Required(ErrorMessage = "لطفا {0} را وارد نمائید")]
+        public string Phone { get; set; }
+
+        [Display(Name = "رمز عبور")]
+        public string Password { get; set; }
+
+        [Display(Name = "نقش")]
+        [Required(ErrorMessage = "لطفا {0} را انتخاب نمائید")]
+        public string SelectedRoleName { get; set; }
+    }
+}

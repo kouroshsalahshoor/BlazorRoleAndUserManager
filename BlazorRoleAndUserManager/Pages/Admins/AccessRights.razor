@@ -1,0 +1,134 @@
+﻿@page "/accessrights/role/{_roleId}"
+@inherits OwningComponentBase<ApplicationDbContext>
+@attribute [Authorize(Roles = "Admins")]
+
+<h3>Access Rights</h3>
+
+@if (_model.RolePages == null)
+{
+    <p>Loading ...</p>
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="@(async () => await validsubmit())">
+
+        <div class="table-responsive tableFixHead text-center">
+            <table class="table table-sm table-bordered table-hover table-striped">
+                <caption>List of Access Rights</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Page Category</th>
+                        <th scope="col">Page Name</th>
+                        <th scope="col">Can Create</th>
+                        <th scope="col">Can Read</th>
+                        <th scope="col">Can Update</th>
+                        <th scope="col">Can Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int rowNbr = 1;
+                    }
+                    @foreach (var item in _model.RolePages)
+                    {
+                        <tr>
+                            <td>@(rowNbr++)</td>
+                            <td>@item.AppPage.Category</td>
+                            <td>@item.AppPage.Name</td>
+                            <td><InputCheckbox @bind-Value="@item.CanCreate" /></td>
+                            <td><InputCheckbox @bind-Value="@item.CanRead" /></td>
+                            <td><InputCheckbox @bind-Value="@item.CanUpdate" /></td>
+                            <td><InputCheckbox @bind-Value="@item.CanDelete" /></td>
+                        </tr>
+                    }
+
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row">
+            <button type="submit" class="btn btn-success mx-2">
+                <span aria-hidden="true">save</span>
+            </button>
+
+            <a class="btn btn-light" href="/roles">
+                back to roles
+            </a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private ApplicationDbContext _db => Service;
+
+    [Inject] private IJSRuntime _js { get; set; }
+    [Inject] private AuditService _auditService { get; set; }
+
+    [Parameter] public string _roleId { get; set; }
+
+    PageViewModel _model = new PageViewModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var rolePages = await _db.RolePages.Include(x => x.AppRole).Include(x => x.AppPage).Where(x => x.RoleId == _roleId).ToListAsync();
+        if (rolePages.Any())
+        {
+            _model.RolePages = await _db.RolePages.Include(x => x.AppRole).Include(x => x.AppPage).Where(x => x.RoleId == _roleId).ToListAsync();
+        }
+        else
+        {
+            _model.RolePages = new List<RolePage>();
+            foreach (var appPage in await _db.AppPages.ToListAsync())
+            {
+                _model.RolePages.Add(new RolePage { RoleId = _roleId, PageId = appPage.Id, AppPage = appPage });
+            }
+        }
+    }
+
+    private async Task validsubmit()
+    {
+        if (!_model.RolePages.Any(x => x.CanCreate) && !_model.RolePages.Any(x => x.CanRead) && !_model.RolePages.Any(x => x.CanUpdate) && !_model.RolePages.Any(x => x.CanDelete))
+        {
+            //error
+            await _js.InvokeVoidAsync("alert", "Please select a checkbox");
+        }
+        else
+        {
+            if (_model.RolePages.All(x => x.Id == 0))
+            {
+                foreach (var rolePage in _model.RolePages)
+                {
+                    _db.RolePages.Add((RolePage)await _auditService.ForCreate(rolePage));
+                }
+            }
+            else
+            {
+                foreach (var rolePage in _model.RolePages)
+                {
+                    _db.RolePages.Update((RolePage)await _auditService.ForEdit(rolePage));
+                }
+            }
+
+            int result = await _db.SaveChangesAsync();
+
+            if (result > 0)
+            {
+                //saved
+                await _js.InvokeVoidAsync("alert", "Data saved");
+
+                _model.RolePages = await _db.RolePages.Include(x => x.AppRole).Include(x => x.AppPage).Where(x => x.RoleId == _roleId).ToListAsync();
+            }
+            else
+            {
+                //error
+                await _js.InvokeVoidAsync("alert", "Error saving data");
+            }
+        }
+    }
+
+    private class PageViewModel
+    {
+        public List<RolePage> RolePages { get; set; }
+    }
+}
